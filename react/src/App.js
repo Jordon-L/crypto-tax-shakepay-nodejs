@@ -447,13 +447,30 @@ function Upload(selectedFile, wallet, shakepayWallet ,setColumns, setData, setTa
         setErrorFile(false)
         setLoading(true)
         const payload = new FormData()
-        payload.append('file', selectedFile)
-        payload.append('wallet', wallet)
-        payload.append('shakepayWallet', shakepayWallet)
-        console.log(selectedDate.getFullYear())
+        payload.append('file', new Blob([selectedFile],{
+            type: 'text/csv'
+        }));
+        if(!wallet){
+            payload.append('wallet', "0")
+        }
+        else{
+            payload.append('wallet', wallet)
+        }
+        if(!shakepayWallet){
+            payload.append('shakepayWallet', "0")
+        }
+        else{
+            payload.append('shakepayWallet', shakepayWallet)
+        }
+        
         payload.append('year', selectedDate.getFullYear())
-        axios.post("/upload", payload, {
+        const qs = require('qs');
+        axios.post("/api/tax", payload, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+              },
             }).then(res => {
+                    console.log(res.data.error)
                     if(res.data.error == "true"){
                         setErrorFile(true)
                         setLoading(false)
