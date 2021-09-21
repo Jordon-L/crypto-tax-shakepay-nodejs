@@ -1,5 +1,6 @@
 const Tax = require('../models/taxModel')
 const qs = require('querystring');
+const Decimal = require('decimal.js');
 
 const { getPostData } = require('../utils')
 
@@ -24,7 +25,24 @@ async function createTaxInfo(req, res){
             //year
             let year = sep[4].trim()
             year = year.split(/Content-Disposition: form-data; name=\"\w+\"/)[1].trim()
-            const newTaxInfo = await Tax.processTax(file, wallet, shakepay, year)
+            // pass in "global" variables for function
+            let globalVars = {
+                totalCAD: new Decimal(0),
+                totalBTC: new Decimal(0),
+                totalETH: new Decimal(0),
+                avgCAD: new Decimal(0),
+                avgBTC: new Decimal(0),
+                avgETH: new Decimal(0),
+                incomeGain: new Decimal(0),
+                capitalGain: new Decimal(0),
+                capitalLoss: new Decimal(0),
+                bankTransferOutCAD: new Decimal(0),
+                CADSent: new Decimal(0),
+                CADReceived: new Decimal(0),
+                send: [],
+                feesInCAD: new Decimal(0),
+            }
+            const newTaxInfo = await Tax.processTax(file, wallet, shakepay, year, globalVars)
             res.writeHead(201,{'Content-Type': 'application/json'})
             res.end(JSON.stringify({error: "true"}))
         }
