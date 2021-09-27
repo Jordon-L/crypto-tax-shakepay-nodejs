@@ -41,8 +41,14 @@ async function createTaxInfo(req, res){
                 CADReceived: new Decimal(0),
                 send: [],
                 feesInCAD: new Decimal(0),
+                walletAddresses: wallet,
+                shakepayWallet: shakepay
             }
-            const newTaxInfo = await Tax.processTax(file, wallet, shakepay, year, globalVars)
+            
+            let taxFunc = Tax
+            const newTaxInfo = await taxFunc.processTax(file, year, globalVars)
+            console.log(globalVars.capitalGain)
+            console.log(globalVars.incomeGain)
             res.writeHead(201,{'Content-Type': 'application/json'})
             res.end(JSON.stringify({error: "true"}))
         }
