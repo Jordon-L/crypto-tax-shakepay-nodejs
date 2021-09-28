@@ -44,7 +44,6 @@ async function createTaxInfo(req, res){
                 walletAddresses: wallet,
                 shakepayWallet: shakepay
             }
-            
             let taxFunc = Tax
             const newTaxInfo = await taxFunc.processTax(file, year, globalVars)
             console.log(globalVars.capitalGain)

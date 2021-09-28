@@ -47,7 +47,6 @@ function formatDataFrame(df){
 }
 function filterByYear(df, year){
     const regex = new RegExp(/^\d+$/);
-    console.log(year)
     const parsed = parseInt(year, 10);
     if(isNaN(parsed)) {
          return 0; 
@@ -76,10 +75,6 @@ function processTax(file, year, globalVars){
         //error
     }
 
-    //ethscan
-    //let t = ethScan.getEthTransactions_ShakepayFormat(globalVars.walletAddress, 'ETH','CAD').then(res =>{
-    //    console.log(0)
-    //})
 
     
     df = filterByYear(df, year)
@@ -116,6 +111,9 @@ function getCurrencyTotals(currency){
 
 // @desc Set amount of a currency in the user's possession
 function setCurrencyTotals(currency, amount){
+    if(amount < 0){
+        amount = 0
+    }
     if(currency === 'CAD'){
         totals.totalCAD = amount
     }
@@ -143,6 +141,7 @@ function getAvgCost(currency){
 
 //
 function setAvgCost(currency, amount){
+    
     if(currency === 'CAD'){
         totals.avgCAD = amount
     }
@@ -226,10 +225,9 @@ function purchaseSale(row){
     let avgDebitPrice = getAvgCost(debitCurrency)
     setCurrencyTotals(debitCurrency, Decimal.sub(totalDebitCurrency, debit))
     // sale of crypto to fait (taxable event)
-    console.log(creditCurrency)
     if(creditCurrency === 'CAD'){
         let costToObtain = 0
-        if(avgDebitPrice != 0){
+        if(!avgDebitPrice.equals(0)){
             costToObtain = Decimal.mul(avgDebitPrice, debit)
         }
         let gain = Decimal.sub(credit, costToObtain)
@@ -261,7 +259,7 @@ function cryptoCashout(row){
     let salePrice = row['Spot Rate']
     let costToObtain = 0
     let credit = Decimal.mul(salePrice, debit)
-    if(totals.walletAddresses.includes(address)){
+    if(!(totals.walletAddresses.includes(address))){
         if(!avgDebitPrice.equals(0)){
             costToObtain = Decimal.mul(avgDebitPrice, debit)
         }
@@ -319,7 +317,7 @@ function fiatCashout(row){
 function walletReceive(row){
     let event = ''
     let credit = row['Amount Credited']
-    let averagePrice = totals.avgETH
+    let averagePrice = getAvgCost(creditCurrency)
     let total = getCurrencyTotals(creditCurrency)
     let sendTransactions = totals.send
     let newSendTransactions = totals.send
@@ -343,7 +341,7 @@ function walletReceive(row){
     else{
         event = 'Income gain'
         let price = row['Spot Rate']
-        let income = Decimal.add(price,credit)
+        let income = Decimal.mul(price, credit)
         let numerator = Decimal.mul(averagePrice, total)
         numerator = Decimal.add(numerator, income)
         let denominator = Decimal.add(credit, total)
