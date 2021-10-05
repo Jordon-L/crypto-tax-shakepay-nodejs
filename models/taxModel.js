@@ -6,6 +6,56 @@ function setup(globalVars){
     totals = globalVars
 }
 
+async function processTax(file, year, globalVars){
+    setup(globalVars)
+    let df = csvToJSON(file)
+    if('Taken From' in df[0]){
+        //error
+        console.log(10)
+    }
+    try{
+        df = formatDataFrame(df)
+    }
+    catch(err){
+        console.log(err)
+    }
+    let addresses = globalVars.walletAddresses.split(',')
+    const regex = new RegExp(/^0x[a-fA-F0-9]{40}$/);
+    try{
+        for(let i = 0; i < addresses.length; i++){
+            let result = regex.test(addresses[i])
+            if (result) {
+                df = await mergeEtherScan(df, addresses[i])
+
+            }
+        }
+    }
+    catch(err){
+        console.log(err)
+    }
+    
+    
+    
+    //process the filtered csv data
+    try{
+        //df = filterByYear(df, year)
+        let taxTables = calculateTax(df)
+        let capitalGainsTax = taxTables['capitalGainsTax']
+        let incomeGainsTax = taxTables['incomeGainsTax']
+        let filteredCapital = filterByYear(capitalGainsTax, 2021)
+        let filteredIncome = filterByYear(incomeGainsTax, 2021)
+    }
+    catch(err){
+        console.log(err)
+    }
+    return new Promise((resolve, reject) => {
+
+        const taxData = 0
+        resolve(taxData)
+    })
+}
+
+
 // @desc parse shakepay csv, splits on new line and commas.
 function csvToJSON(csv){
     rows = csv.split("\n")
@@ -68,53 +118,9 @@ function filterByYear(df, year){
         }
         let startOfYear = new Date(parsed, 1, 1).getTime()
         let endOfYear = new Date(parsed, 12, 31).getTime()
-        return df.filter(entry => (new Date(entry['Date']+':00').getTime() > startOfYear) &&
-            (new Date(entry['Date']+':00').getTime() <= endOfYear) )
+        return df.filter(entry => (entry['Date'].getTime() > startOfYear) &&
+            (entry['Date'].getTime() <= endOfYear) )
     }
-}
-async function processTax(file, year, globalVars){
-    setup(globalVars)
-    let df = csvToJSON(file)
-    if('Taken From' in df[0]){
-        //error
-        console.log(10)
-    }
-    try{
-        df = formatDataFrame(df)
-    }
-    catch(err){
-        console.log(err)
-    }
-    let addresses = globalVars.walletAddresses.split(',')
-    const regex = new RegExp(/^0x[a-fA-F0-9]{40}$/);
-    try{
-        for(let i = 0; i < addresses.length; i++){
-            let result = regex.test(addresses[i])
-            if (result) {
-                df = await mergeEtherScan(df, addresses[i])
-
-            }
-        }
-    }
-    catch(err){
-        console.log(err)
-    }
-    
-    
-    
-    //process the filtered csv data
-    try{
-        //df = filterByYear(df, year)
-        calculateTax(df)
-    }
-    catch(err){
-        console.log(err)
-    }
-    return new Promise((resolve, reject) => {
-
-        const taxData = 0
-        resolve(taxData)
-    })
 }
 // @desc Get amount of a currency in the user's possession
 function getCurrencyTotals(currency){
@@ -463,9 +469,19 @@ function calculateCapitalGainsTax(row){
     }
 }
 function calculateIncomeTax(row){
-    let price = row['Spot Rate']
     let credit = row['Amount Credited']
     let creditCurrency = row['Credit Currency']
+    if(creditCurrency === 'CAD'){
+        return {
+            'Date': row['Date'],
+            'Name': 'Canadian Dollars',
+            'Number': roundTo4Decimal(credit),
+            'Cost': 0,
+            'Income': roundTo4Decimal(credit),
+        }
+    }
+    let price = row['Spot Rate']
+    
     let income = Decimal.mul(price, credit)
     let name = 'placeholder'
     if (creditCurrency === 'ETH') {
@@ -510,7 +526,7 @@ function calculateTax(table){
         }
 
         if(event === 'Income Gain'){
-            incomeGainsTax.push(calculateIncomeGainsTax(row))
+            incomeGainsTax.push(calculateIncomeTax(row))
         }
     })
     return {capitalGainsTax, incomeGainsTax}
