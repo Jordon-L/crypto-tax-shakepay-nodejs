@@ -470,14 +470,14 @@ function Upload(selectedFile, wallet, shakepayWallet ,setColumns, setData, setTa
                 "Content-Type": "multipart/form-data",
               },
             }).then(res => {
-                    console.log(res.data.error)
+                    console.log(res)
                     if(res.data.error == "true"){
                         setErrorFile(true)
                         setLoading(false)
                     }
                     else{
                         CreateTable(res.data.table ,res.data.columns, setColumns, setData)
-                        const info = JSON.parse(res.data.info)
+                        const info = res.data.info
                         setTaxInfo({
                             incomeGain: info.incomeGain,
                             capitalGain: info.capitalGain,
@@ -493,6 +493,13 @@ function Upload(selectedFile, wallet, shakepayWallet ,setColumns, setData, setTa
                             totalGainsBTC: info.totalGainsBTC
                             })
                     }
+                }).catch(function (error){
+                    console.log(error)
+                    alert("An error has occured, Could not read data sent back")
+                    setError(false)
+                    setErrorEth(false)
+                    setErrorFile(false)
+                    setLoading(false)
                 })
     }
 }
@@ -501,15 +508,20 @@ class App extends Component {
     render(){
 
         return (
-        <Grid Container disableGutters maxWidth= "false" direction="column" alignItems="center" id = "website">
-            <Grid item xs={12} id = "title">
-                <h1> Crypto gains </h1>
-                <h4> for Shakepay and Ethereum mining</h4>
+            <div id = "website">
+            <Grid Container disableGutters maxWidth= "false" direction="column" alignItems="center" id = "content">
+                <Grid item xs={12} id = "title">
+                    <h1> Crypto gains </h1>
+                    <h4> for Shakepay and Ethereum mining</h4>
+                </Grid>
+                <Grid item xs={12} id = "results">
+                    <UserInput/>
+                </Grid>
             </Grid>
-            <Grid item xs={12} id = "results">
-                <UserInput/>
-            </Grid>
-        </Grid>
+           <div id = "footer">
+                <p>Powered By Coingecko API and Etherscan API</p>
+            </div>
+        </div>
     );}
 
 }

@@ -35,41 +35,129 @@ async function processTax(file, year, globalVars){
     }
     
     
-    
+    let taxData
+    let dataToBeSent
     //process the filtered csv data
     try{
         //df = filterByYear(df, year)
         let taxTables = calculateTax(df)
         let capitalGainsTax = taxTables['capitalGainsTax']
         let incomeGainsTax = taxTables['incomeGainsTax']
-        let filteredCapital = filterByYear(capitalGainsTax, 2021)
-        let filteredIncome = filterByYear(incomeGainsTax, 2021)
+        let unsoldHoldings = taxTables['unsoldHoldings']
+        console.log(unsoldHoldings[year])
+        //capital gain
+        let filteredCapital = filterByYear(capitalGainsTax, year)
+        let numberBTC = new Decimal(0)
+        let soldForBTC = new Decimal(0)
+        let costBTC = new Decimal(0)
+        let feesBTC = new Decimal(0)
+        let gainBTC = new Decimal(0)
+        let numberETH = new Decimal(0)
+        let soldForETH = new Decimal(0)
+        let costETH = new Decimal(0)
+        let feesETH = new Decimal(0)
+        let gainETH = new Decimal(0)
+        let income = new Decimal(0)
+        filteredCapital.forEach(entry => {
+            if(entry['Name'] === 'Bitcoin'){
+                numberBTC = Decimal.add(numberBTC, entry['Number'] )
+                soldForBTC = Decimal.add(soldForBTC, entry['Sold For'] )
+                costBTC = Decimal.add(costBTC, entry['Cost'])
+                feesBTC = Decimal.add(feesBTC, entry['Fees'])
+                gainBTC = Decimal.add(gainBTC, entry['Gain'])
+            }
+            else if(entry['Name'] === 'Ethereum'){
+                numberETH = Decimal.add(numberETH, entry['Number'] )
+                soldForETH = Decimal.add(soldForETH, entry['Sold For'] )
+                costETH = Decimal.add(costETH, entry['Cost'])
+                feesETH = Decimal.add(feesETH, entry['Fees'])
+                gainETH = Decimal.add(gainETH, entry['Gain'])  
+            }
+        })
+        //income gain
+        let filteredIncome = filterByYear(incomeGainsTax, year)
+        filteredIncome.forEach(entry => {
+            income = Decimal.add(income, entry['Income'])
+        })
+        taxData = {        
+            'incomeGain': income.toString(),
+            'capitalGain': Decimal.add(gainETH,gainBTC).toString(),
+            'totalNumberETH': numberETH.toString(),
+            'totalSalePriceETH': soldForETH.toString(),
+            'totalCostETH': costETH.toString(),
+            'totalFeesETH': feesETH.toString(),
+            'totalGainsETH': gainETH.toString(),
+    
+            'totalNumberBTC': numberBTC.toString(),
+            'totalSalePriceBTC': soldForBTC.toString(),
+            'totalCostBTC': costBTC.toString(),
+            'totalFeesBTC': feesBTC.toString(),
+            'totalGainsBTC': gainBTC.toString(),
+        }
+        
+        let filteredTransactions = filterByYear(df, year)
+        let previousYearHoldingsETH = {
+            'Transaction Type': 'Previous year\'s holdings',
+            'Date': new Date(year-1,11,31), // months are from 0-11
+            'Amount Credited': unsoldHoldings[year-1].Ethereum.total,
+            'Buy / Sell Rate': unsoldHoldings[year-1].Ethereum.cost,
+            'Event': 'Previous year\'s holdings'
+        }
+        let previousYearHoldingsBTC = {
+            'Transaction Type': 'Previous year\'s holdings',
+            'Date': new Date(year-1,11,31),
+            'Amount Credited': unsoldHoldings[year-1].Bitcoin.total,
+            'Buy / Sell Rate': unsoldHoldings[year-1].Bitcoin.cost,
+            'Event': 'Previous year\'s holdings'
+        }
+        filteredTransactions.unshift(previousYearHoldingsETH,previousYearHoldingsBTC) 
+        let columns = [
+            {"title": 'Transaction Type', "field": 'Transaction Type'},
+            {"title": 'Date', "field": 'Date'},
+            {"title": 'Amount Debited', "field": 'Amount Debited'},
+            {"title": 'Amount Credited', "field": 'Amount Credited'},
+            {"title": 'Buy / Sell Rate', "field": 'Buy / Sell Rate'},
+            {"title": 'Direction', "field": 'Direction'},
+            {"title": 'Spot Rate', "field": 'Spot Rate'},
+            {"title": 'Taken From', "field": 'Taken From'},
+            {"title": 'Event', "field": 'Event'},
+            {"title": 'Source / Destination', "field": 'Source / Destination'}
+            ]
+        
+        dataToBeSent = {
+            'columns': columns,
+            'table': filteredTransactions,
+            'info': taxData,
+            'error': 'false'
+        }
     }
     catch(err){
         console.log(err)
     }
     return new Promise((resolve, reject) => {
-
-        const taxData = 0
-        resolve(taxData)
+        
+        if(taxData != null){
+            resolve(dataToBeSent)
+        }
+        reject('No tax data')
     })
 }
 
 
 // @desc parse shakepay csv, splits on new line and commas.
 function csvToJSON(csv){
-    rows = csv.split("\n")
-    column = rows[0].split(",")
+    rows = csv.split('\n')
+    column = rows[0].split(',')
     let table = []
     for(let i = 1; i < rows.length; i++){
-        let row = rows[i].split(",")
+        let row = rows[i].split(',')
         let jsonRow = {}
         for(let j = 0; j < row.length; j++){
             //remove the double quotations if there is
-            if(row[j].includes("\"")){
+            if(row[j].includes('\"')){
                 row[j] = row[j].slice(1,-1)
             }
-            if(column[j].includes("\"")){
+            if(column[j].includes('\"')){
                 column[j] = column[j].slice(1,-1)
                 jsonRow[column[j]] = row[j]
             }
@@ -85,7 +173,7 @@ function csvToJSON(csv){
 
 function formatDataFrame(df){
     df.forEach(element => {
-        element['Date'] = new Date(element['Date'] + ":00")      
+        element['Date'] = new Date(element['Date'] + ':00')
         if(element['Amount Credited'] != ''){
             element['Amount Credited'] = new Decimal(element['Amount Credited'])
         }
@@ -183,17 +271,12 @@ function setAvgCost(currency, amount){
 // @desc Calculate the income gain from receiving a currency and adjust the average cost
 function peerTransfer(row){
     let event = ''
-    let incomeGain = totals.incomeGain
     if(row['Credit Currency'] === 'CAD'){
         event = 'Transfer Fiat'
-     totals.CADReceived = Decimal.add(totals.CADReceived, row['Amount Credited'])
-     totals.totalCAD = Decimal.add(totals.totalCAD, row['Amount Credited'])
         return event
     }
     else if(row['Debit Currency'] === 'CAD'){
         event = 'Transfer Fiat'
-     totals.CADSent = Decimal.add(totals.CADReceived, row['Amount Debited'])
-     totals.totalCAD = Decimal.sub(totals.totalCAD, row['Amount Debited'])
         return event
     }
     if(row['Direction'] === 'credit'){
@@ -205,16 +288,14 @@ function peerTransfer(row){
             //if spot rate is empty for some reason. continue runnning code           
         }
         else{
-            incomeGain = Decimal.add(incomeGain, Decimal.mul(credit,row['Spot Rate']))
             let currentAvg = getAvgCost(creditCurrency)
-            let numerator = Decimal.add(Decimal.mul(currentAvg, totalCreditCurrency), Decimal.mul(row["Spot Rate"], credit))
+            let numerator = Decimal.add(Decimal.mul(currentAvg, totalCreditCurrency), Decimal.mul(row['Spot Rate'], credit))
             let denominator =  Decimal.add(totalCreditCurrency, credit)
             let newAvg =  Decimal.div(numerator,denominator)
             setAvgCost(creditCurrency, newAvg)
             setCurrencyTotals(creditCurrency, Decimal.add(totalCreditCurrency,credit))           
         }
     }
-    totals.incomeGain = incomeGain
     return event
 }
 
@@ -236,8 +317,6 @@ function fiatFunding(row){
 // and increase amount of crypto the user's possession when a purchase happens
 function purchaseSale(row){
     let event = 'Purchase Crypto'
-    let capitalGain = totals.capitalGain
-    let capitalLoss = totals.capitalLoss
     //credit
     let credit = row['Amount Credited']
     let creditCurrency = row['Credit Currency']
@@ -264,24 +343,17 @@ function purchaseSale(row){
         let gain = Decimal.sub(credit, costToObtain)
         if(gain.lessThan(0)){
             event = 'Capital Loss'
-            capitalLoss = Decimal.add(capitalLoss, gain)
-            totals.capitalLoss = capitalLoss
         }
         else if(gain.greaterThanOrEqualTo(0)){
             event = 'Capital Gain'
-            capitalGain = Decimal.add(capitalGain, gain)
-            totals.capitalGain = capitalGain
         }
     }
-    totals.capitalGain = capitalGain
     return event
 }
 // @desc Calculate capital gain or loss when transferring crypto outside of shakepay
 function cryptoCashout(row){
     let event = ''
     let address = row['Source / Destination']
-    let capitalGain = totals.capitalGain
-    let capitalLoss = totals.capitalLoss
     let debit = row['Amount Debited']
     let debitCurrency = row['Debit Currency']
     let totalDebitCurrency = getCurrencyTotals(debitCurrency)
@@ -297,30 +369,19 @@ function cryptoCashout(row){
         let gain = Decimal.sub(credit, costToObtain)
         if(gain.lessThan(0)){
             event = 'Capital Loss'
-            capitalLoss = Decimal.add(capitalLoss, gain)
-            totals.capialLoss = capitalLoss
         }
         else if(gain.greaterThanOrEqualTo(0)){
             event = 'Capital Gain'
-            capitalGain = Decimal.add(capitalGain, gain)
-            totals.capitalGain = capitalGain
         }
     }
     else{
         event = 'Internal transfer'
-        totals.send.push(row)
     }
     return event
 }
 
 function referralReward(row){
     let event = 'Income Gain'
-    let incomeGain = totals.incomeGain
-    let credit = row['Amount Credited']
-    let creditCurrency = row['Credit Currency']
-    if(creditCurrency === 'CAD'){
-        totals.incomeGain = Decimal.add(incomeGain, credit)
-    }
     return event
 }
 
@@ -335,13 +396,6 @@ function cryptoFunding(row){
 
 function fiatCashout(row){
     let event = 'Internal transfer'
-    let bankTransfer = totals.bankTransferOutCAD
-    let debit = row['Amount Debited']
-    let debitCurrency = row['Debit Currency']
-    if(debit === 'CAD'){
-        bankTransfer = Decimal.add(bankTransfer, debit)
-    }
-    totals.bankTransferOutCAD = bankTransfer
     return event
 }
 // for ether scan data
@@ -352,7 +406,6 @@ function walletReceive(row){
     let creditCurrency = row['Credit Currency']
     let averagePrice = getAvgCost(creditCurrency)
     let total = getCurrencyTotals(creditCurrency)
-    let sendTransactions = totals.send
     let shakepayWallet = totals.shakepayWallet
     // check transaction was by user
     if(row['Source / Destination'].toLowerCase() === shakepayWallet.toLowerCase){
@@ -371,7 +424,6 @@ function walletReceive(row){
         total = Decimal.add(total, credit)
         setCurrencyTotals(creditCurrency, total)
         setAvgCost(creditCurrency, averagePrice)
-        totals.incomeGain = Decimal.add(totals.incomeGain, income)
     }
     return event
 }
@@ -379,8 +431,6 @@ function walletReceive(row){
 function walletSend(row){
     let event = ''
     let address = row['Source / Destination']
-    let capitalGain = totals.capitalGain
-    let capitalLoss = totals.capitalLoss
     let debit = row['Amount Debited']
     let debitCurrency = row['Debit Currency']
     let totalDebitCurrency = getCurrencyTotals(debitCurrency)
@@ -396,13 +446,9 @@ function walletSend(row){
         let gain = Decimal.sub(credit, costToObtain)
         if(gain.lessThan(0)){
             event = 'Capital Loss'
-            capitalLoss = Decimal.add(capitalLoss, gain)
-            totals.capialLoss = capitalLoss
         }
         else if(gain.greaterThanOrEqualTo(0)){
             event = 'Capital Gain'
-            capitalGain = Decimal.add(capitalGain, gain)
-            totals.capitalGain = capitalGain
         }
     }
     else{
@@ -412,24 +458,11 @@ function walletSend(row){
     return event
 }
 
-function referralReward(row){
-    let event = 'Income Gain'
-    let incomeGain = totals.incomeGain
-    let credit = row['Amount Credited']
-    let creditCurrency = row['Credit Currency']
-    if(creditCurrency === 'CAD'){
-        totals.incomeGain = Decimal.add(incomeGain,credit)
-    }
-    return event
-}
-
 // @desc function to round numbers to 4 decimal places
 function roundTo4Decimal(num){
     return num.toDecimalPlaces(4, Decimal.ROUND_UP)
 }
 function calculateCapitalGainsTax(row){
-    let event = row['Event']
-    
     let debitCurrency = row['Debit Currency']
     let number = row['Amount Debited']
     let name = 'Error'
@@ -450,8 +483,6 @@ function calculateCapitalGainsTax(row){
     }
     if (debitCurrency === 'ETH') {
         name = 'Ethereum'
-        let accumulatedFees = 0 // need calculate
-
     }
     else if (debitCurrency === 'BTC') {
         name = 'Bitcoin'
@@ -476,7 +507,7 @@ function calculateIncomeTax(row){
             'Date': row['Date'],
             'Name': 'Canadian Dollars',
             'Number': roundTo4Decimal(credit),
-            'Cost': 0,
+            'Cost': 1,
             'Income': roundTo4Decimal(credit),
         }
     }
@@ -501,42 +532,85 @@ function calculateIncomeTax(row){
 
 function calculateTax(table){
     let TRANSACTION_PARSE = {
-        "peer transfer": peerTransfer,
-        "fiat funding": fiatFunding,
-        "purchase/sale": purchaseSale,
-        "crypto cashout": cryptoCashout,
-        "referral reward": referralReward,
-        "crypto funding": cryptoFunding,
-        "fiat cashout": fiatCashout,
-        "Receive": walletReceive,
-        "Send": walletSend,
-        "shakingsats": peerTransfer,
-        "other": referralReward
+        'peer transfer': peerTransfer,
+        'fiat funding': fiatFunding,
+        'purchase/sale': purchaseSale,
+        'crypto cashout': cryptoCashout,
+        'referral reward': referralReward,
+        'crypto funding': cryptoFunding,
+        'fiat cashout': fiatCashout,
+        'Receive': walletReceive,
+        'Send': walletSend,
+        'shakingsats': peerTransfer,
+        'other': referralReward
     }
     let capitalGainsTax = []
+    let capitalRow = []
+    let capitalLossRow = []
     let incomeGainsTax = []
+    let purchases = []
+    let currentYear = table[0]['Date'].getFullYear()
+    let unsoldHoldings = {}
+    console.log(currentYear)
+    //separate capital gain and income gain
     table.forEach(row => {
         let event = TRANSACTION_PARSE[row['Transaction Type']](row)
         row['Event'] = event
-        
-
-            //add entry to capital gains tax table
+        if(row['Date'].getFullYear() > currentYear){
+            unsoldHoldings[currentYear] = {
+                'Ethereum': {
+                    'total': totals.totalETH,
+                    'cost': totals.avgETH
+                },
+                'Bitcoin': {
+                    'total': totals.totalBTC,
+                    'cost': totals.avgBTC
+                }
+            }
+        }
+        //parse entry to capital gains tax table
         if(event === 'Capital Gain' || event === 'Capital Loss'){
             capitalGainsTax.push(calculateCapitalGainsTax(row))
+            capitalRow.push(row)
+            if(event === 'Capital Loss'){
+                capitalLossRow.push(row)
+            }
         }
 
         if(event === 'Income Gain'){
             incomeGainsTax.push(calculateIncomeTax(row))
         }
+        if(event === 'Purchase Crypto'){
+            purchases.push(row)
+        }
     })
-    return {capitalGainsTax, incomeGainsTax}
+    //check for superficial loss
+    capitalLossRow.forEach(row => {
+        let sellDate = row['Date']
+        let before = new Date(sellDate)
+        before.setDate(before.getDay() - 31)
+        let after = new Date(sellDate)
+        after.setDate(after.getDay() + 31)
+        before.setUTCHours(23, 59, 59, 59)
+        after.setUTCHours(0, 0, 0, 0)
+        for(let i = 0; i < purchases.length; i++){
+            let purchase = purchases[i]
+            let buyDate = purchase['Date']
+            if((buyDate > before || buyDate < after) && purchase['Credit Currency'] === row['Debit Currency']){
+                row['Event'] = 'Superficial Loss'
+                break
+            }
+        }
+    })
+    capitalGainsTax = capitalGainsTax.filter((row, index) => capitalRow[index]['Event'] !== 'Superficial Loss')
+    console.log(unsoldHoldings)
+    return {capitalGainsTax, incomeGainsTax, purchases, unsoldHoldings}
 }
 
 // @desc takes etherscan data obtain from given address and merges them with shakepay data
 async function mergeEtherScan(shakepayData, address){
     try{
         let etherScanData = await ethScan.getEthTransactions_ShakepayFormat(address, 'ethereum', 'CAD')
-        console.log(etherScanData)
         let mergedData = shakepayData.concat(etherScanData)
         return mergedData
     }

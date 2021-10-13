@@ -5,7 +5,13 @@ const path = require("path")
 
 const server = http.createServer((req, res) => {
     if(req.url === '/api/tax' && req.method == 'POST') {
-       createTaxInfo(req, res)
+       try {
+           createTaxInfo(req, res)
+        }
+        catch(err){
+            console.log(err)
+        }
+
     }
     else if(req.url === '/' && req.method === 'GET'){
         let html = fs.readFile('./react/build/index.html', 'UTF-8', function(err, html){
