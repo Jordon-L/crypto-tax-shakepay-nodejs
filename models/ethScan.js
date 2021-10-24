@@ -65,6 +65,7 @@ function getCoinGeckoDailyPrices(date, dailyPrices){
     return Decimal(price)
 }
 async function getEthTransactions_ShakepayFormat(walletAddress, currency, fiat){
+    console.log(apiKey)
     const regex = new RegExp(/^0x[a-fA-F0-9]{40}$/);
     
     let result = regex.test(walletAddress)
