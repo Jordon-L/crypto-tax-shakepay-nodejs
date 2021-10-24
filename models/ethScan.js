@@ -1,8 +1,8 @@
 const Decimal = require('decimal.js');
-let apiKey = '0' // change
-var api = require('etherscan-api').init(`${apiKey}`)
+let apiKey = process.env.etherscanAPI;
+var api = require('etherscan-api').init(`${apiKey}`);
 const CoinGecko = require('coingecko-api');
-const axios = require('axios')
+const axios = require('axios');
 const CoinGeckoClient = new CoinGecko();
 
 // @desc get normal transactions for a wallet address from etherscan 

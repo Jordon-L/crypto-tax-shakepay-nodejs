@@ -5,7 +5,7 @@ let totals = {}
 function setup(globalVars){
     totals = globalVars
 }
-
+// @desc calculate income tax and capital gains tax for cryptocurrency
 async function processTax(file, year, globalVars){
     setup(globalVars)
     let df = csvToJSON(file)
@@ -39,7 +39,6 @@ async function processTax(file, year, globalVars){
     let dataToBeSent
     //process the filtered csv data
     try{
-        //df = filterByYear(df, year)
         let taxTables = calculateTax(df)
         let capitalGainsTax = taxTables['capitalGainsTax']
         let incomeGainsTax = taxTables['incomeGainsTax']
@@ -255,7 +254,7 @@ function getAvgCost(currency){
     return 0
 }
 
-//
+// @desc set the average cost of a currency
 function setAvgCost(currency, amount){
     amount = Decimal(amount)
     if(currency === 'CAD'){
@@ -350,6 +349,7 @@ function purchaseSale(row){
     }
     return event
 }
+
 // @desc Calculate capital gain or loss when transferring crypto outside of shakepay
 function cryptoCashout(row){
     let event = ''
