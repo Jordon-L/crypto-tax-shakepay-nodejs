@@ -9,10 +9,6 @@ function setup(globalVars){
 async function processTax(file, year, globalVars){
     setup(globalVars)
     let df = csvToJSON(file)
-    if('Taken From' in df[0]){
-        //error
-        console.log(10)
-    }
     try{
         df = formatDataFrame(df)
     }
@@ -43,7 +39,6 @@ async function processTax(file, year, globalVars){
         let capitalGainsTax = taxTables['capitalGainsTax']
         let incomeGainsTax = taxTables['incomeGainsTax']
         let unsoldHoldings = taxTables['unsoldHoldings']
-        console.log(unsoldHoldings[year])
         //capital gain
         let filteredCapital = filterByYear(capitalGainsTax, year)
         let numberBTC = new Decimal(0)
@@ -93,23 +88,25 @@ async function processTax(file, year, globalVars){
             'totalFeesBTC': feesBTC.toString(),
             'totalGainsBTC': gainBTC.toString(),
         }
-        
+
         let filteredTransactions = filterByYear(df, year)
-        let previousYearHoldingsETH = {
-            'Transaction Type': 'Previous year\'s holdings',
-            'Date': new Date(year-1,11,31), // months are from 0-11
-            'Amount Credited': unsoldHoldings[year-1].Ethereum.total,
-            'Buy / Sell Rate': unsoldHoldings[year-1].Ethereum.cost,
-            'Event': 'Previous year\'s holdings'
+        if(unsoldHoldings[year-1]){
+            let previousYearHoldingsETH = {
+                'Transaction Type': 'Previous year\'s holdings',
+                'Date': new Date(year-1,11,31), // months are from 0-11
+                'Amount Credited': unsoldHoldings[year-1].Ethereum.total,
+                'Buy / Sell Rate': unsoldHoldings[year-1].Ethereum.cost,
+                'Event': 'Previous year\'s holdings'
+            }
+            let previousYearHoldingsBTC = {
+                'Transaction Type': 'Previous year\'s holdings',
+                'Date': new Date(year-1,11,31),
+                'Amount Credited': unsoldHoldings[year-1].Bitcoin.total,
+                'Buy / Sell Rate': unsoldHoldings[year-1].Bitcoin.cost,
+                'Event': 'Previous year\'s holdings'
+            }
+            filteredTransactions.unshift(previousYearHoldingsETH,previousYearHoldingsBTC)            
         }
-        let previousYearHoldingsBTC = {
-            'Transaction Type': 'Previous year\'s holdings',
-            'Date': new Date(year-1,11,31),
-            'Amount Credited': unsoldHoldings[year-1].Bitcoin.total,
-            'Buy / Sell Rate': unsoldHoldings[year-1].Bitcoin.cost,
-            'Event': 'Previous year\'s holdings'
-        }
-        filteredTransactions.unshift(previousYearHoldingsETH,previousYearHoldingsBTC) 
         let columns = [
             {"title": 'Transaction Type', "field": 'Transaction Type'},
             {"title": 'Date', "field": 'Date'},
@@ -551,7 +548,6 @@ function calculateTax(table){
     let purchases = []
     let currentYear = table[0]['Date'].getFullYear()
     let unsoldHoldings = {}
-    console.log(currentYear)
     //separate capital gain and income gain
     table.forEach(row => {
         let event = TRANSACTION_PARSE[row['Transaction Type']](row)
@@ -603,7 +599,6 @@ function calculateTax(table){
         }
     })
     capitalGainsTax = capitalGainsTax.filter((row, index) => capitalRow[index]['Event'] !== 'Superficial Loss')
-    console.log(unsoldHoldings)
     return {capitalGainsTax, incomeGainsTax, purchases, unsoldHoldings}
 }
 

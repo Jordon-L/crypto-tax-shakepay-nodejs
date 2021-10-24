@@ -62,7 +62,7 @@ async function getCoinGeckoPrices(){
 
 function getCoinGeckoDailyPrices(date, dailyPrices){
     price = dailyPrices[date]
-    return price
+    return Decimal(price)
 }
 async function getEthTransactions_ShakepayFormat(walletAddress, currency, fiat){
     const regex = new RegExp(/^0x[a-fA-F0-9]{40}$/);
