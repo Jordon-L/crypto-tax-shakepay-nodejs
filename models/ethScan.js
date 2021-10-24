@@ -7,8 +7,9 @@ const CoinGeckoClient = new CoinGecko();
 
 // @desc get normal transactions for a wallet address from etherscan 
 async function getEthTransactions(walletAddress){
+    const sleep = (milliseconds=1000) => new Promise(resolve => setTimeout(resolve, milliseconds))
     const getTransactions = () => {
-        try {
+        try { 
             return axios.get(`https://api.etherscan.io/api?module=account&action=txlist&address=${walletAddress}&startblock=0&endblock=99999999&sort=asc&apikey=${apiKey}`)
         } catch (error) {
             throw new Error('Etherscan error');
@@ -16,6 +17,7 @@ async function getEthTransactions(walletAddress){
     }
     // remove any data we do not need
     try{
+        await sleep(1000)
         let res = await getTransactions();
         let transactions = res.data.result
         transactions.forEach(element => {
@@ -65,7 +67,6 @@ function getCoinGeckoDailyPrices(date, dailyPrices){
     return Decimal(price)
 }
 async function getEthTransactions_ShakepayFormat(walletAddress, currency, fiat){
-    console.log(apiKey)
     const regex = new RegExp(/^0x[a-fA-F0-9]{40}$/);
     
     let result = regex.test(walletAddress)
