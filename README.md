@@ -1,11 +1,9 @@
 ## Project title
 A crypto tax calculator for Shakepay. This will help you calculate your taxes for crypto purchased and sold on Shakepay.
 
+Application can be viewed here : https://crypto-tax-nodejs.herokuapp.com/
 ## Motivation
 There are many other crypto tax calculators, but most are not completely free. Using a paid calculator will cut into crypto profits, so I created my own calculator.
-
-## Screenshots
-Include logo/demo screenshot etc.
 
 ## Tech/framework used
 <b>Built with</b>
@@ -44,5 +42,6 @@ INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
 LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
 OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
+
 
 
