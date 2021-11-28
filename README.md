@@ -1,4 +1,4 @@
-## Project title
+## Crypto Gains
 A crypto tax calculator for Shakepay. This will help you calculate your taxes for crypto purchased and sold on Shakepay.
 
 Application can be viewed here : https://crypto-tax-nodejs.herokuapp.com/
