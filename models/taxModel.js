@@ -616,5 +616,10 @@ async function mergeEtherScan(shakepayData, address){
 }
 
 module.exports = {
-    processTax
+    getCurrencyTotals,
+    getAvgCost,
+    setup,
+    processTax,
+    purchaseSale,
+    cryptoCashout,
 }
