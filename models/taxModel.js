@@ -134,7 +134,6 @@ async function processTax(file, year, globalVars){
     catch(err){
         console.log(err)
     }
-    console.log(totals)
     return new Promise((resolve, reject) => {
         
         if(taxData != null){
