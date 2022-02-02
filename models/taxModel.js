@@ -15,7 +15,10 @@ async function processTax(file, year, globalVars){
     catch(err){
         console.log(err)
     }
-    let addresses = globalVars.walletAddresses.split(',')
+    let addresses = totals.walletAddresses.split(',')
+    addresses = addresses.map(address => address.toLowerCase())
+    totals.walletAddresses = addresses
+
     const regex = new RegExp(/^0x[a-fA-F0-9]{40}$/);
     try{
         for(let i = 0; i < addresses.length; i++){
@@ -124,12 +127,14 @@ async function processTax(file, year, globalVars){
             'columns': columns,
             'table': filteredTransactions,
             'info': taxData,
+            'totals' : totals,
             'error': 'false'
         }
     }
     catch(err){
         console.log(err)
     }
+    console.log(totals)
     return new Promise((resolve, reject) => {
         
         if(taxData != null){
@@ -233,7 +238,7 @@ function setCurrencyTotals(currency, amount){
         totals.totalBTC = amount
     }
     else if(currency === 'ETH'){
-        totals.totalBTC = amount
+        totals.totalETH = amount
     }
 }
 
@@ -264,6 +269,12 @@ function setAvgCost(currency, amount){
         totals.avgETH = amount
     } 
 }
+
+// @desc add to total fees
+function addTotalFees(amount){
+    totals.fees = Decimal.add(totals.fees, amount)
+}
+
 // @desc Calculate the income gain from receiving a currency and adjust the average cost
 function peerTransfer(row){
     let event = ''
@@ -279,6 +290,7 @@ function peerTransfer(row){
         event = 'Income Gain'
         let credit = row['Amount Credited']
         let creditCurrency = row['Credit Currency']
+        
         let totalCreditCurrency = getCurrencyTotals(creditCurrency)
         if(row['Spot Rate'] === ''){
             //if spot rate is empty for some reason. continue runnning code           
@@ -289,7 +301,7 @@ function peerTransfer(row){
             let denominator =  Decimal.add(totalCreditCurrency, credit)
             let newAvg =  Decimal.div(numerator,denominator)
             setAvgCost(creditCurrency, newAvg)
-            setCurrencyTotals(creditCurrency, Decimal.add(totalCreditCurrency,credit))           
+            setCurrencyTotals(creditCurrency, denominator)           
         }
     }
     return event
@@ -318,12 +330,16 @@ function purchaseSale(row){
     let creditCurrency = row['Credit Currency']
     let totalCreditCurrency = getCurrencyTotals(creditCurrency)
     let buyPrice = row['Buy / Sell Rate']
+    if(creditCurrency == 'CAD'){
+        buyPrice = 1;
+    }
     let currentAvg = getAvgCost(creditCurrency)
     let numerator = Decimal.add(Decimal.mul(currentAvg, totalCreditCurrency), Decimal.mul(buyPrice, credit))
     let denominator = Decimal.add(totalCreditCurrency, credit)
     let newAvg = Decimal.div(numerator, denominator)
     setAvgCost(creditCurrency, newAvg)
     setCurrencyTotals(creditCurrency, denominator)
+
     //debit
     let debit = row['Amount Debited']
     let debitCurrency = row['Debit Currency']
@@ -399,28 +415,26 @@ function fiatCashout(row){
 
 function walletReceive(row){
     let event = ''
-    let credit = row['Amount Credited']
-    let creditCurrency = row['Credit Currency']
-    let averagePrice = getAvgCost(creditCurrency)
-    let total = getCurrencyTotals(creditCurrency)
     let shakepayWallet = totals.shakepayWallet
     // check transaction was by user
     if(row['Source / Destination'].toLowerCase() === shakepayWallet.toLowerCase){
         event = 'Internal transfer' 
+        let total = getCurrencyTotals(creditCurrency)
         total = Decimal.add(total, credit)
-        totals.totalETH = total
+        setCurrencyTotals(creditCurrency, total)
     } // transaction was not by user
     else{
         event = 'Income Gain'
-        let price = row['Spot Rate']
-        let income = Decimal.mul(price, credit)
-        let numerator = Decimal.mul(averagePrice, total)
-        numerator = Decimal.add(numerator, income)
-        let denominator = Decimal.add(credit, total)
-        averagePrice = Decimal.div(numerator, denominator)
-        total = Decimal.add(total, credit)
-        setCurrencyTotals(creditCurrency, total)
-        setAvgCost(creditCurrency, averagePrice)
+        let credit = row['Amount Credited']
+        let creditCurrency = row['Credit Currency']
+        let totalCreditCurrency = getCurrencyTotals(creditCurrency)
+        let buyPrice = row['Spot Rate']
+        let currentAvg = getAvgCost(creditCurrency)
+        let numerator = Decimal.add(Decimal.mul(currentAvg, totalCreditCurrency), Decimal.mul(buyPrice, credit))
+        let denominator = Decimal.add(totalCreditCurrency, credit)
+        let newAvg = Decimal.div(numerator, denominator)
+        setAvgCost(creditCurrency, newAvg)
+        setCurrencyTotals(creditCurrency, denominator)
     }
     return event
 }
@@ -432,11 +446,17 @@ function walletSend(row){
     let debitCurrency = row['Debit Currency']
     let totalDebitCurrency = getCurrencyTotals(debitCurrency)
     let avgDebitPrice = getAvgCost(debitCurrency)
-    setCurrencyTotals(debitCurrency, Decimal.sub(totalDebitCurrency, debit))
+    setCurrencyTotals(debitCurrency, Decimal.sub(totalDebitCurrency, Decimal.add(debit,row['fees'])))
     let salePrice = row['Spot Rate']
     let costToObtain = 0
     let credit = Decimal.mul(salePrice, debit)
-    if(!(totals.walletAddresses.includes(address))){
+    let shakepayWallet = totals.shakepayWallet
+    let wallets = totals.walletAddresses
+    addTotalFees(row['fees'])
+    if(shakepayWallet.toLowerCase() === address.toLowerCase() || wallets.includes(address)){
+        event = 'Internal transfer'
+    }
+    else{
         if(!avgDebitPrice.equals(0)){
             costToObtain = Decimal.mul(avgDebitPrice, debit)
         }
@@ -446,18 +466,14 @@ function walletSend(row){
         }
         else if(gain.greaterThanOrEqualTo(0)){
             event = 'Capital Gain'
-        }
-    }
-    else{
-        event = 'Internal transfer'
-        totals.send.push(row)
+        } 
     }
     return event
 }
 
-// @desc function to round numbers to 4 decimal places
-function roundTo4Decimal(num){
-    return num.toDecimalPlaces(4, Decimal.ROUND_UP)
+// @desc function to round numbers to 10 decimal places
+function roundTo10Decimal(num){
+    return num.toDecimalPlaces(10, Decimal.ROUND_UP)
 }
 function calculateCapitalGainsTax(row){
     let debitCurrency = row['Debit Currency']
@@ -475,9 +491,7 @@ function calculateCapitalGainsTax(row){
         sold = row['Amount Credited']
     }
     let price = Decimal.mul(getAvgCost(debitCurrency), row['Amount Debited'])
-    if (getCurrencyTotals(debitCurrency).equals(0)) {
-        setAvgCost(debitCurrency, 0)
-    }
+
     if (debitCurrency === 'ETH') {
         name = 'Ethereum'
     }
@@ -487,13 +501,13 @@ function calculateCapitalGainsTax(row){
     let gain = Decimal.sub(Decimal.sub(sold, price), fees)
     return {
         'Date': row['Date'],
-        'Number': roundTo4Decimal(number),
+        'Number': roundTo10Decimal(number),
         'Name': name,
         'Year of acquisition': year,
-        'Sold For': roundTo4Decimal(sold),
-        'Cost': roundTo4Decimal(price),
-        'Fees': roundTo4Decimal(fees),
-        'Gain': roundTo4Decimal(gain),
+        'Sold For': roundTo10Decimal(sold),
+        'Cost': roundTo10Decimal(price),
+        'Fees': roundTo10Decimal(fees),
+        'Gain': roundTo10Decimal(gain),
     }
 }
 function calculateIncomeTax(row){
@@ -503,9 +517,9 @@ function calculateIncomeTax(row){
         return {
             'Date': row['Date'],
             'Name': 'Canadian Dollars',
-            'Number': roundTo4Decimal(credit),
+            'Number': roundTo10Decimal(credit),
             'Cost': 1,
-            'Income': roundTo4Decimal(credit),
+            'Income': roundTo10Decimal(credit),
         }
     }
     let price = row['Spot Rate']
@@ -521,9 +535,9 @@ function calculateIncomeTax(row){
     return {
         'Date': row['Date'],
         'Name': name,
-        'Number': roundTo4Decimal(credit),
-        'Cost': roundTo4Decimal(price),
-        'Income': roundTo4Decimal(income),
+        'Number': roundTo10Decimal(credit),
+        'Cost': roundTo10Decimal(price),
+        'Income': roundTo10Decimal(income),
     }
 }
 
@@ -607,6 +621,7 @@ async function mergeEtherScan(shakepayData, address){
     try{
         let etherScanData = await ethScan.getEthTransactions_ShakepayFormat(address, 'ethereum', 'CAD')
         let mergedData = shakepayData.concat(etherScanData)
+        mergedData = mergedData.sort(sortByDate)
         return mergedData
     }
     catch(err){

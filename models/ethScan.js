@@ -1,5 +1,5 @@
 const Decimal = require('decimal.js');
-let apiKey = process.env.etherscanAPI;
+let apiKey = 'Z9HS32XF3WUIAF68SDTBSV8YBVH3VR7ETR';
 var api = require('etherscan-api').init(`${apiKey}`);
 const CoinGecko = require('coingecko-api');
 const axios = require('axios');
@@ -86,7 +86,7 @@ async function getEthTransactions_ShakepayFormat(walletAddress, currency, fiat){
             let dateOfTransaction = new Date(month  + '-' + day + '-' + year)
             let price = getCoinGeckoDailyPrices(dateOfTransaction, dailyPrices)
             let value = Decimal.div(row['value'], Decimal('1000000000000000000'))
-            let fees = Decimal.div(row['gasPrice'], Decimal('1000000000000000000'))
+            let fees = Decimal.mul(row['gas'], Decimal.div(row['gasPrice'], Decimal('1000000000000000000')))
             if(row['from'].toLowerCase()  === walletAddress.toLowerCase()){
                 let entry = {
                     'Transaction Type' : 'Send',
@@ -121,7 +121,6 @@ async function getEthTransactions_ShakepayFormat(walletAddress, currency, fiat){
                 dfShakepay = dfShakepay.concat(entry)    
             }
         })
-        
         return dfShakepay 
     }
     catch(err){

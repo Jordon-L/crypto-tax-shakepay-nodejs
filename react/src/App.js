@@ -132,6 +132,7 @@ function UserInput(){
     const [columns, setColumns] = useState([]);
     const [data, setData] = useState([]);
     const [taxInfo, setTaxInfo] = useState({});
+    const [totals, setTotals] = useState({});
 
     let today = new Date();
 
@@ -191,7 +192,7 @@ function UserInput(){
                 
                 <Grid item xs = {12}>
                     <Button className = {classes.buttonText} variant="contained" color= "primary" onClick={() =>
-                        Upload(selectedFile, wallet, shakepayWallet, setColumns, setData, setTaxInfo, setLoading, setShakepayWallet, setError, selectedDate, setErrorEth, setErrorFile)}>
+                        Upload(selectedFile, wallet, shakepayWallet, setColumns, setData, setTaxInfo, setLoading, setShakepayWallet, setTotals, setError, selectedDate, setErrorEth, setErrorFile)}>
                             Submit </Button>
                 </Grid>
 
@@ -235,15 +236,19 @@ function UserInput(){
                 </Grid>
                 <Grid item xs = {12}>
                     <Button className = {classes.buttonText} variant="contained" color= "primary" onClick={() =>
-                        Upload(selectedFile, wallet, shakepayWallet, setColumns, setData, setTaxInfo, setLoading, setShakepayWallet, setError, selectedDate, setErrorEth, setErrorFile)}>
+                        Upload(selectedFile, wallet, shakepayWallet, setColumns, setData, setTaxInfo, setLoading, setShakepayWallet, setTotals, setError, selectedDate, setErrorEth, setErrorFile)}>
                             Submit </Button>
                 </Grid>
             </Grid>
     }
     else if(Object.keys(taxInfo).length > 0){
-        content = <Grid container className = {classes.grid}>
+        content = <Grid container className = {classes.grid}>           
             <Grid item xs={12} className = {classes.taxInformation}>
-                <Card className = {classes.taxInfo}>
+                <Button className = {classes.buttonText} variant="contained" color= "primary" onClick={() => 
+                    Reset(setFileName, setWallet, setShakepayWallet ,setColumns, setData, setTaxInfo, setLoading, handleDateChange, setUploaded)}>
+                    Go Back 
+                </Button>
+                <Card className = {classes.taxInformation}>
                     <CardContent>
                         <Accordion disabled className = {classes.disabledAccordion}>
                             <AccordionSummary
@@ -318,7 +323,11 @@ function UserInput(){
     )
 }
 
-function Upload(selectedFile, wallet, shakepayWallet ,setColumns, setData, setTaxInfo,setLoading, setShakepayWallet, setError, selectedDate, setErrorEth, setErrorFile){
+function Reset(setFileName, setWallet, setShakepayWallet ,setColumns, setData, setTaxInfo, setLoading, handleDateChange, setUploaded, setTotals){
+    setTaxInfo({});
+    setTotals({});    
+}
+function Upload(selectedFile, wallet, shakepayWallet ,setColumns, setData, setTaxInfo,setLoading, setShakepayWallet, setTotals, setError, selectedDate, setErrorEth, setErrorFile){
     if(selectedFile == null || selectedDate == null){
         setError(true)
         setLoading(false)
@@ -362,7 +371,7 @@ function Upload(selectedFile, wallet, shakepayWallet ,setColumns, setData, setTa
                         setLoading(false)
                     }
                     else{
-                        CreateTable(res.data.table ,res.data.columns, setColumns, setData)
+                        CreateTable(res.data.table ,res.data.columns, setColumns, setData);
                         const info = res.data.info
                         setTaxInfo({
                             incomeGain: info.incomeGain,
@@ -377,15 +386,16 @@ function Upload(selectedFile, wallet, shakepayWallet ,setColumns, setData, setTa
                             totalCostBTC: info.totalCostBTC,
                             totalFeesBTC: info.totalFeesBTC,
                             totalGainsBTC: info.totalGainsBTC
-                            })
+                            });
+                        setTotals(res.data.totals);
                     }
                 }).catch(function (error){
                     console.log(error)
-                    alert("An error has occured, Could not read data sent back")
-                    setError(false)
-                    setErrorEth(false)
-                    setErrorFile(false)
-                    setLoading(false)
+                    alert("An error has occured, Could not read data sent back");
+                    setError(false);
+                    setErrorEth(false);
+                    setErrorFile(false);
+                    setLoading(false);
                 })
     }
 }
