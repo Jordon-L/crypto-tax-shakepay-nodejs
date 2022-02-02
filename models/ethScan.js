@@ -1,5 +1,5 @@
 const Decimal = require('decimal.js');
-let apiKey = 'Z9HS32XF3WUIAF68SDTBSV8YBVH3VR7ETR';
+let apiKey = process.env.etherscanAPI;
 var api = require('etherscan-api').init(`${apiKey}`);
 const CoinGecko = require('coingecko-api');
 const axios = require('axios');
