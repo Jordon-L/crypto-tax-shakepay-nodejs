@@ -73,8 +73,17 @@ async function processTax(file, year, globalVars){
         })
         //income gain
         let filteredIncome = filterByYear(incomeGainsTax, year)
+        let incomeBTC = Decimal(0)
+        let incomeETH = Decimal(0)
         filteredIncome.forEach(entry => {
             income = Decimal.add(income, entry['Income'])
+            if(entry['Name'] === 'Bitcoin'){
+                incomeBTC = Decimal.add(incomeBTC,entry['Income'])
+            }
+            if(entry['Name'] === 'Ethereum'){
+                incomeETH = Decimal.add(incomeETH,entry['Income'])
+            }
+            
         })
         taxData = {        
             'incomeGain': income.toString(),
@@ -204,10 +213,10 @@ function filterByYear(df, year){
         if(parsed < 1970){
             parsed = 1970
         }
-        let startOfYear = new Date(parsed, 1, 1).getTime()
-        let endOfYear = new Date(parsed, 12, 31).getTime()
-        return df.filter(entry => (entry['Date'].getTime() > startOfYear) &&
-            (entry['Date'].getTime() <= endOfYear) )
+        let startOfYear = new Date(parsed, 0, 1).getTime() // Month starts at 0
+        let endOfYear = new Date(parsed, 11, 31).getTime()
+        return df.filter(entry => (entry['Date'].getTime() >= startOfYear &&
+            entry['Date'].getTime() <= endOfYear) )
     }
 }
 // @desc Get amount of a currency in the user's possession
@@ -522,7 +531,7 @@ function calculateIncomeTax(row){
         }
     }
     let price = row['Spot Rate']
-    
+
     let income = Decimal.mul(price, credit)
     let name = 'placeholder'
     if (creditCurrency === 'ETH') {
@@ -576,9 +585,10 @@ function calculateTax(table){
                     'cost': totals.avgBTC
                 }
             }
+            currentYear = currentYear + 1
         }
         //parse entry to capital gains tax table
-        if(event === 'Capital Gain' || event === 'Capital Loss'){
+        else if(event === 'Capital Gain' || event === 'Capital Loss'){
             capitalGainsTax.push(calculateCapitalGainsTax(row))
             capitalRow.push(row)
             if(event === 'Capital Loss'){
@@ -586,10 +596,10 @@ function calculateTax(table){
             }
         }
 
-        if(event === 'Income Gain'){
+        else if(event === 'Income Gain'){
             incomeGainsTax.push(calculateIncomeTax(row))
         }
-        if(event === 'Purchase Crypto'){
+        else if(event === 'Purchase Crypto'){
             purchases.push(row)
         }
     })
