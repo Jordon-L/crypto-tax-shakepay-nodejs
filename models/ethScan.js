@@ -53,12 +53,14 @@ async function getCoinGeckoPrices(){
         let time = element[0]
         let price = element[1]
         let date = new Date(time)
-        let year = date.getFullYear()
-        let month = date.getMonth() + 1
-        let day = date.getDate()
-        let dateOfTransaction = new Date(month  + '-' + day + '-' + year)
+        let year = date.getUTCFullYear()
+        let month = date.getUTCMonth()
+        let day = date.getUTCDate()
+        
+        let dateOfTransaction = new Date(year, month, day)
         dailyPrice[dateOfTransaction] = price
     })
+
     return dailyPrice
 }
 
@@ -67,6 +69,8 @@ function getCoinGeckoDailyPrices(date, dailyPrices){
     return Decimal(price)
 }
 async function getEthTransactions_ShakepayFormat(walletAddress, currency, fiat){
+
+
     const regex = new RegExp(/^0x[a-fA-F0-9]{40}$/);
     
     let result = regex.test(walletAddress)
@@ -80,13 +84,13 @@ async function getEthTransactions_ShakepayFormat(walletAddress, currency, fiat){
         let total = 0
         df.forEach(row => {
             let transactionTime = new Date(row['timeStamp'])
-            let year = transactionTime.getFullYear()
-            let month = transactionTime.getMonth() + 1
-            let day = transactionTime.getDate()
-            let dateOfTransaction = new Date(month  + '-' + day + '-' + year)
+            let year = transactionTime.getUTCFullYear()
+            let month = transactionTime.getUTCMonth()
+            let day = transactionTime.getUTCDate()
+            let dateOfTransaction = new Date(year,month,day)
             let price = getCoinGeckoDailyPrices(dateOfTransaction, dailyPrices)
             let value = Decimal.div(row['value'], Decimal('1000000000000000000'))
-            let fees = Decimal.div(row['gasPrice'], Decimal('1000000000000000000'))
+            let fees = Decimal.mul(row['gas'], Decimal.div(row['gasPrice'], Decimal('1000000000000000000')))
             if(row['from'].toLowerCase()  === walletAddress.toLowerCase()){
                 let entry = {
                     'Transaction Type' : 'Send',
@@ -121,7 +125,6 @@ async function getEthTransactions_ShakepayFormat(walletAddress, currency, fiat){
                 dfShakepay = dfShakepay.concat(entry)    
             }
         })
-        
         return dfShakepay 
     }
     catch(err){

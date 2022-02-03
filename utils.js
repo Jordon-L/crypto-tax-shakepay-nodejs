@@ -16,7 +16,10 @@ function getPostData(req) {
         }
     })
 }
-
+function JSONToCSV(rows, columns){
+    let csvContent = "data:text/csv;charset=utf-8,";
+    
+}
 module.exports = {
     getPostData
 }

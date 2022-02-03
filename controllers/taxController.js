@@ -32,6 +32,7 @@ async function createTaxInfo(req, res){
             avgCAD: new Decimal(0),
             avgBTC: new Decimal(0),
             avgETH: new Decimal(0),
+            fees: new Decimal(0),
             walletAddresses: wallet,
             shakepayWallet: shakepay
         }
