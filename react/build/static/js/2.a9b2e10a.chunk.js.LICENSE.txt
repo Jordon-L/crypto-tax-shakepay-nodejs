@@ -5,6 +5,12 @@ object-assign
 */
 
 /**
+ * @license MIT
+ * doc-path <https://github.com/mrodrig/doc-path>
+ * Copyright (c) 2015-present, Michael Rodrigues.
+ */
+
+/**
  * A better abstraction over CSS.
  *
  * @copyright Oleg Isonen (Slobodskoi) / Isonen 2014-present

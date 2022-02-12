@@ -112,12 +112,42 @@ const useStyles = makeStyles((theme) => ({
     moreDetail :{
         marginLeft: '0.5em'
     },
+    downloadButton: {
+        color: '#F7F7F7',
+        background: 'black',
+        textTransform: 'capitalize',
+        "&:hover": {
+            backgroundColor: 'black',
+        },
+        marginLeft: '30px'
+    },
 }));
 function CreateTable(rows ,columns, setColumns, setData){
     setColumns(columns);
     setData(rows);
 }
-
+function DownloadCSV(data){
+    const handleSaveToPC = csv => {
+        const fileData = csv
+        const blob = new Blob([fileData], {type: "text/plain"});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = 'transactions.csv';
+        link.href = url;
+        link.click();
+    }
+    const fs = require('fs');
+    const converter = require('json-2-csv');
+    converter.json2csv(data, (err, csv) => {
+        if (err) {
+            throw err;
+        }
+        
+        // write CSV to a file
+        handleSaveToPC(csv)       
+    });
+      
+}
 function UserInput(){
     const [selectedFile, setSelectedFile] = useState(null);
     const [fileName, setFileName] = useState(null);
@@ -247,6 +277,10 @@ function UserInput(){
                 <Button className = {classes.buttonText} variant="contained" color= "primary" onClick={() => 
                     Reset(setFileName, setWallet, setShakepayWallet ,setColumns, setData, setTaxInfo, setLoading, handleDateChange, setUploaded)}>
                     Go Back 
+                </Button>
+                <Button className = {classes.downloadButton} variant="contained" color= "primary" onClick={() => 
+                    DownloadCSV(data)}>
+                    Download Transactions
                 </Button>
                 <Card className = {classes.taxInformation}>
                     <CardContent>
