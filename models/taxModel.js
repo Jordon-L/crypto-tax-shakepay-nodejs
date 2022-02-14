@@ -15,6 +15,11 @@ async function processTax(file, year, globalVars){
     catch(err){
         console.log(err)
     }
+    df = df.map(function(e){
+        e['Taken From'] = 'Shakepay'
+        return e
+    }) 
+
     let addresses = totals.walletAddresses.split(',')
     addresses = addresses.map(address => address.toLowerCase())
     totals.walletAddresses = addresses
@@ -104,18 +109,37 @@ async function processTax(file, year, globalVars){
         let filteredTransactions = filterByYear(df, year)
         if(unsoldHoldings[year-1]){
             let previousYearHoldingsETH = {
-                'Transaction Type': 'Previous year\'s holdings',
+                'Transaction Type': 'Previous year\'s remaining holdings',
                 'Date': new Date(year-1,11,31), // months are from 0-11
+                'Amount Debited': '',
+                'Debit Currency': '',
                 'Amount Credited': unsoldHoldings[year-1].Ethereum.total,
+                'Credit Currency': 'ETH',
                 'Buy / Sell Rate': unsoldHoldings[year-1].Ethereum.cost,
-                'Event': 'Previous year\'s holdings'
+                'Direction' : 'credit',
+                'Spot Rate' : '',
+                'Source / Destination' : '',
+                'Blockchain Transaction ID': '',
+                'Event': 'Previous year\'s holdings',
+                'Taken From' : '',
+                'fees': ''
+                
             }
             let previousYearHoldingsBTC = {
-                'Transaction Type': 'Previous year\'s holdings',
-                'Date': new Date(year-1,11,31),
+                'Transaction Type': 'Previous year\'s remaining holdings',
+                'Date': new Date(year-1,11,31), // months are from 0-11
+                'Amount Debited': '',
+                'Debit Currency': '',
                 'Amount Credited': unsoldHoldings[year-1].Bitcoin.total,
+                'Credit Currency': 'BTC',
                 'Buy / Sell Rate': unsoldHoldings[year-1].Bitcoin.cost,
-                'Event': 'Previous year\'s holdings'
+                'Direction' : 'credit',
+                'Spot Rate' : '',
+                'Source / Destination' : '',
+                'Blockchain Transaction ID': '',
+                'Event': 'Previous year\'s holdings',
+                'Taken From' : '',
+                'fees': ''
             }
             filteredTransactions.unshift(previousYearHoldingsETH,previousYearHoldingsBTC)            
         }
@@ -460,7 +484,7 @@ function walletSend(row){
     let credit = Decimal.mul(salePrice, debit)
     let shakepayWallet = totals.shakepayWallet
     let wallets = totals.walletAddresses
-    addTotalFees(row['fees'])
+    addTotalFees(Decimal.mul(salePrice,row['fees']))
     if(shakepayWallet.toLowerCase() === address.toLowerCase() || wallets.includes(address)){
         event = 'Internal transfer'
     }
@@ -499,7 +523,6 @@ function calculateCapitalGainsTax(row){
         sold = row['Amount Credited']
     }
     let price = Decimal.mul(getAvgCost(debitCurrency), row['Amount Debited'])
-
     if (debitCurrency === 'ETH') {
         name = 'Ethereum'
     }
@@ -568,14 +591,12 @@ function calculateTax(table){
     let capitalLossRow = []
     let incomeGainsTax = []
     let purchases = []
-    let currentYear = table[0]['Date'].getFullYear()
+    let lastYear = table[0]['Date'].getFullYear() - 1
     let unsoldHoldings = {}
     //separate capital gain and income gain
     table.forEach(row => {
-        let event = TRANSACTION_PARSE[row['Transaction Type']](row)
-        row['Event'] = event
-        if(row['Date'].getFullYear() > currentYear){
-            unsoldHoldings[currentYear] = {
+        if(row['Date'].getFullYear() > lastYear){
+            unsoldHoldings[lastYear] = {
                 'Ethereum': {
                     'total': totals.totalETH,
                     'cost': totals.avgETH
@@ -585,10 +606,12 @@ function calculateTax(table){
                     'cost': totals.avgBTC
                 }
             }
-            currentYear = currentYear + 1
+            lastYear = lastYear + 1
         }
+        let event = TRANSACTION_PARSE[row['Transaction Type']](row)
+        row['Event'] = event
         //parse entry to capital gains tax table
-        else if(event === 'Capital Gain' || event === 'Capital Loss'){
+        if(event === 'Capital Gain' || event === 'Capital Loss'){
             capitalGainsTax.push(calculateCapitalGainsTax(row))
             capitalRow.push(row)
             if(event === 'Capital Loss'){
@@ -628,7 +651,16 @@ function calculateTax(table){
 // @desc takes etherscan data obtain from given address and merges them with shakepay data
 async function mergeEtherScan(shakepayData, address){
     try{
+        shakepayData = shakepayData.map(function(e) {
+            if(e['fees'] == undefined){
+                e['fees'] = ''
+            }
+            
+            return e
+        })
+
         let etherScanData = await ethScan.getEthTransactions_ShakepayFormat(address, 'ethereum', 'CAD')
+
         let mergedData = shakepayData.concat(etherScanData)
         mergedData = mergedData.sort(sortByDate)
         return mergedData

@@ -99,10 +99,12 @@ async function getEthTransactions_ShakepayFormat(walletAddress, currency, fiat){
                     'Debit Currency': 'ETH',
                     'Amount Credited' : '',
                     'Credit Currency': '',
+                    'Buy / Sell Rate': '',
                     'Direction' : 'debit',
                     'Spot Rate' : price,
                     'Source / Destination' : row['to'],
                     'Taken From' : 'Etherscan',
+                    'Blockchain Transaction ID': '',
                     'Event': '' ,
                     'fees': fees,
                 }
@@ -116,11 +118,14 @@ async function getEthTransactions_ShakepayFormat(walletAddress, currency, fiat){
                     'Debit Currency': '',
                     'Amount Credited': value,
                     'Credit Currency': 'ETH',
+                    'Buy / Sell Rate': '',
                     'Direction' : 'credit',
                     'Spot Rate' : price,
                     'Source / Destination' : row['from'],
+                    'Blockchain Transaction ID': '',
                     'Taken From' : 'Etherscan',
                     'Event': '' ,
+                    'fees': ''
                 }
                 dfShakepay = dfShakepay.concat(entry)    
             }
