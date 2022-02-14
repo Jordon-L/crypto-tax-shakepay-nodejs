@@ -17,9 +17,11 @@ async function processTax(file, year, globalVars){
     }
     df = df.map(function(e){
         e['Taken From'] = 'Shakepay'
+        if(e['fees'] == undefined){
+            e['fees'] = ''
+        }
         return e
-    }) 
-
+    })
     let addresses = totals.walletAddresses.split(',')
     addresses = addresses.map(address => address.toLowerCase())
     totals.walletAddresses = addresses
