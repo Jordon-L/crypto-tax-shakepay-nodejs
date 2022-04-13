@@ -574,6 +574,10 @@ function calculateIncomeTax(row){
     }
 }
 
+function cardTransactions(row){
+    row['event'] =  'visa card'
+}
+
 function calculateTax(table){
     let TRANSACTION_PARSE = {
         'peer transfer': peerTransfer,
@@ -586,7 +590,9 @@ function calculateTax(table){
         'Receive': walletReceive,
         'Send': walletSend,
         'shakingsats': peerTransfer,
-        'other': referralReward
+        'other': referralReward,
+        'card transactions': cardTransactions,
+        'card cashbacks': cardTransactions
     }
     let capitalGainsTax = []
     let capitalRow = []
