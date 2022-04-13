@@ -575,7 +575,8 @@ function calculateIncomeTax(row){
 }
 
 function cardTransactions(row){
-    row['Event'] =  'visa card'
+    let event = 'visa card'
+    return event
 }
 
 function calculateTax(table){
