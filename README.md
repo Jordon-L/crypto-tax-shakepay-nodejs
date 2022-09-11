@@ -1,7 +1,7 @@
 ## Crypto Gains
 A crypto tax calculator for Shakepay. This will help you calculate your taxes for crypto purchased and sold on Shakepay.
 
-Application can be viewed here : https://crypto-tax-nodejs.herokuapp.com/
+Application can be viewed here : https://crypto-tax.jordonlee.com/
 ## Motivation
 There are many other crypto tax calculators, but most are not completely free. Using a paid calculator will cut into crypto profits, so I created my own calculator.
 
@@ -24,6 +24,7 @@ Optional
 
 ## Credits
 https://www.canada.ca/en/revenue-agency/programs/about-canada-revenue-agency-cra/compliance/digital-currency/cryptocurrency-guide.html
+
 https://koinly.io/guides/crypto-tax-canada/
 
 ## License
