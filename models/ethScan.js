@@ -1,6 +1,6 @@
 const Decimal = require('decimal.js');
 let apiKey = process.env.etherscanAPI;
-var api = require('etherscan-api').init(`${apiKey}`);
+var api = require('etherscan-api').init('`${apiKey}`');
 const CoinGecko = require('coingecko-api');
 const axios = require('axios');
 const CoinGeckoClient = new CoinGecko();
@@ -66,6 +66,9 @@ async function getCoinGeckoPrices(){
 
 function getCoinGeckoDailyPrices(date, dailyPrices){
     price = dailyPrices[date]
+    if(price === undefined){
+        return undefined
+    }
     return Decimal(price)
 }
 async function getEthTransactions_ShakepayFormat(walletAddress, currency, fiat){
@@ -81,7 +84,6 @@ async function getEthTransactions_ShakepayFormat(walletAddress, currency, fiat){
         let df = await getEthTransactions(walletAddress)
         let dailyPrices = await getCoinGeckoPrices(currency, fiat)
         let dfShakepay = []
-        let total = 0
         df.forEach(row => {
             let transactionTime = new Date(row['timeStamp'])
             let year = transactionTime.getUTCFullYear()
@@ -107,6 +109,7 @@ async function getEthTransactions_ShakepayFormat(walletAddress, currency, fiat){
                     'Blockchain Transaction ID': '',
                     'Event': '' ,
                     'fees': fees,
+                    
                 }
                 dfShakepay = dfShakepay.concat(entry)
             }
@@ -125,7 +128,7 @@ async function getEthTransactions_ShakepayFormat(walletAddress, currency, fiat){
                     'Blockchain Transaction ID': '',
                     'Taken From' : 'Etherscan',
                     'Event': '' ,
-                    'fees': ''
+                    'fees': '',
                 }
                 dfShakepay = dfShakepay.concat(entry)    
             }

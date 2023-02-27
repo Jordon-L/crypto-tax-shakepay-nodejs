@@ -579,6 +579,17 @@ function cardTransactions(row){
     return event
 }
 
+function shakingSats(row){
+    let event = 'shaking Sats'
+    if(row['Direction'] === 'credit'){
+        let credit = row['Amount Credited']
+        let currency = row['Credit Currency']
+        let totalCurrency = getCurrencyTotals(currency)
+        setCurrencyTotals(currency, Decimal.add(totalCurrency, credit))
+    }
+    return event
+}
+
 function calculateTax(table){
     let TRANSACTION_PARSE = {
         'peer transfer': peerTransfer,
@@ -590,7 +601,7 @@ function calculateTax(table){
         'fiat cashout': fiatCashout,
         'Receive': walletReceive,
         'Send': walletSend,
-        'shakingsats': peerTransfer,
+        'shakingsats': shakingSats,
         'other': referralReward,
         'card transactions': cardTransactions,
         'card cashbacks': cardTransactions
@@ -603,6 +614,7 @@ function calculateTax(table){
     let lastYear = table[0]['Date'].getFullYear() - 1
     let unsoldHoldings = {}
     //separate capital gain and income gain
+
     table.forEach(row => {
         if(row['Date'].getFullYear() > lastYear){
             unsoldHoldings[lastYear] = {
@@ -653,6 +665,8 @@ function calculateTax(table){
             }
         }
     })
+    console.log(getAvgCost('ETH'))
+    console.log(getCurrencyTotals('ETH'))
     capitalGainsTax = capitalGainsTax.filter((row, index) => capitalRow[index]['Event'] !== 'Superficial Loss')
     return {capitalGainsTax, incomeGainsTax, purchases, unsoldHoldings}
 }
@@ -669,7 +683,6 @@ async function mergeEtherScan(shakepayData, address){
         })
 
         let etherScanData = await ethScan.getEthTransactions_ShakepayFormat(address, 'ethereum', 'CAD')
-
         let mergedData = shakepayData.concat(etherScanData)
         mergedData = mergedData.sort(sortByDate)
         return mergedData
