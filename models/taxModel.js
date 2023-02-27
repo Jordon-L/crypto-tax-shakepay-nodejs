@@ -602,6 +602,7 @@ function calculateTax(table){
         'Receive': walletReceive,
         'Send': walletSend,
         'shakingsats': shakingSats,
+        'secretsats': shakingSats,
         'other': referralReward,
         'card transactions': cardTransactions,
         'card cashbacks': cardTransactions
@@ -630,6 +631,7 @@ function calculateTax(table){
             lastYear = lastYear + 1
         }
         let type = row['Transaction Type']
+        console.log(type)
         let event = TRANSACTION_PARSE[type](row)
         row['Event'] = event
         //parse entry to capital gains tax table
