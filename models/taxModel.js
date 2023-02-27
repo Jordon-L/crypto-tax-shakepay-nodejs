@@ -629,7 +629,8 @@ function calculateTax(table){
             }
             lastYear = lastYear + 1
         }
-        let event = TRANSACTION_PARSE[row['Transaction Type']](row)
+        let type = row['Transaction Type']
+        let event = TRANSACTION_PARSE[type](row)
         row['Event'] = event
         //parse entry to capital gains tax table
         if(event === 'Capital Gain' || event === 'Capital Loss'){
